@@ -2,9 +2,42 @@ import { NextResponse } from "next/server";
 import { readFile, readdir, stat } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
+
+// 환경 감지: 로컬 vs Vercel
+const isLocal = !process.env.VERCEL || process.env.DASHBOARD_MODE === 'local';
+const isDev = process.env.NODE_ENV === 'development';
 
 // OpenClaw 로그 디렉토리 경로
 const LOGS_DIR = process.env.OPENCLAW_LOGS_DIR || "/home/ninefire/.openclaw/logs";
+
+// Mock 데이터 (Vercel 환경용)
+const mockData = {
+  gateway: {
+    status: "online" as const,
+    lastChecked: new Date().toISOString(),
+    uptime: "running",
+    errors: [],
+  },
+  cronJobs: [
+    { name: "AI News Briefing", lastRun: new Date().toISOString(), status: "success" as const, logCount: 150, recentErrors: 0 },
+    { name: "Knowledge Sync", lastRun: new Date(Date.now() - 3600000).toISOString(), status: "success" as const, logCount: 89, recentErrors: 1 },
+    { name: "Health Check", lastRun: new Date(Date.now() - 7200000).toISOString(), status: "success" as const, logCount: 200, recentErrors: 0 },
+  ],
+  gptUsage: {
+    estimatedTokens: 45000,
+    estimatedCost: 0.09,
+    last24hCalls: 89,
+    lastReset: new Date().toISOString(),
+  },
+  logFiles: [
+    { name: "gateway-cleaner.log", size: 102400, modified: new Date().toISOString() },
+    { name: "ai-news.log", size: 51200, modified: new Date(Date.now() - 3600000).toISOString() },
+  ],
+};
 
 // 로그 파일 항목 타입
 interface LogEntry {
@@ -37,6 +70,27 @@ interface GatewayStatus {
   lastChecked: string | null;
   uptime: string | null;
   errors: string[];
+}
+
+// openclaw 명령어 실행하여 상태 확인
+async function getOpenClawStatus(): Promise<GatewayStatus> {
+  try {
+    // openclaw gateway status 명령 실행
+    const { stdout } = await execAsync('openclaw gateway status 2>/dev/null || echo "unknown"');
+    const output = stdout.trim();
+    
+    const isOnline = output.includes('running') || output.includes('online') || output.includes('active');
+    
+    return {
+      status: isOnline ? "online" : "offline",
+      lastChecked: new Date().toISOString(),
+      uptime: isOnline ? "running" : null,
+      errors: [],
+    };
+  } catch (error) {
+    // 명령어 실패 시 로그 기반 파싱으로 폴백
+    return parseGatewayStatus();
+  }
 }
 
 // 로그 파일 파싱 함수
@@ -148,15 +202,12 @@ async function parseCronJobs(): Promise<CronJobStatus[]> {
 
 // GPT 사용량 추정 (로그 기반)
 async function estimateGPTUsage(): Promise<GPTUsage> {
-  // 실제로는 API 키가 필요하지만, 로그에서 간접 추정
-  const logsDir = LOGS_DIR;
-
   try {
-    const files = await readdir(logsDir);
+    const files = await readdir(LOGS_DIR);
     const allEntries: LogEntry[] = [];
 
     for (const file of files.slice(0, 5)) {
-      const filePath = join(logsDir, file);
+      const filePath = join(LOGS_DIR, file);
       const entries = await parseLogFile(filePath, 50);
       allEntries.push(...entries);
     }
@@ -217,6 +268,30 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") || "summary";
 
+  // Vercel 환경: Mock 데이터 반환
+  if (!isLocal && !isDev) {
+    if (type === "summary") {
+      return NextResponse.json({
+        success: true,
+        mock: true,
+        message: "Running in Vercel mode - Mock data",
+        data: mockData,
+        lastUpdated: new Date().toISOString(),
+      });
+    }
+    // 다른 타입에도 Mock 데이터 반환
+    return NextResponse.json({
+      success: true,
+      mock: true,
+      data: type === "gateway" ? mockData.gateway : 
+            type === "cron" ? mockData.cronJobs :
+            type === "logs" ? mockData.logFiles : mockData,
+      lastUpdated: new Date().toISOString(),
+    });
+  }
+
+  // 로컬 환경: 실제 데이터 수집
+  
   // 로그 디렉토리 확인
   if (!existsSync(LOGS_DIR)) {
     return NextResponse.json({
@@ -235,8 +310,9 @@ export async function GET(request: Request) {
 
   try {
     if (type === "summary") {
-      const [gateway, cronJobs, gptUsage, logFiles] = await Promise.all([
-        parseGatewayStatus(),
+      // 로컬에서는 openclaw 명령어도 시도
+      const [gatewayStatus, cronJobs, gptUsage, logFiles] = await Promise.all([
+        getOpenClawStatus(),
         parseCronJobs(),
         estimateGPTUsage(),
         getLogFiles(),
@@ -244,8 +320,9 @@ export async function GET(request: Request) {
 
       return NextResponse.json({
         success: true,
+        local: true,
         data: {
-          gateway,
+          gateway: gatewayStatus,
           cronJobs,
           gptUsage,
           logFiles: logFiles.slice(0, 10),
@@ -254,9 +331,10 @@ export async function GET(request: Request) {
         lastUpdated: new Date().toISOString(),
       });
     } else if (type === "gateway") {
-      const gateway = await parseGatewayStatus();
+      const gateway = await getOpenClawStatus();
       return NextResponse.json({
         success: true,
+        local: true,
         data: gateway,
         lastUpdated: new Date().toISOString(),
       });
@@ -264,6 +342,7 @@ export async function GET(request: Request) {
       const cronJobs = await parseCronJobs();
       return NextResponse.json({
         success: true,
+        local: true,
         data: cronJobs,
         lastUpdated: new Date().toISOString(),
       });
@@ -271,6 +350,7 @@ export async function GET(request: Request) {
       const logFiles = await getLogFiles();
       return NextResponse.json({
         success: true,
+        local: true,
         data: logFiles,
         lastUpdated: new Date().toISOString(),
       });
@@ -294,6 +374,7 @@ export async function GET(request: Request) {
       const entries = await parseLogFile(filePath, 100);
       return NextResponse.json({
         success: true,
+        local: true,
         data: {
           fileName,
           entries,
