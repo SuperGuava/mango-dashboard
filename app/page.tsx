@@ -7,6 +7,7 @@ import IPOSnapshot from "./components/widgets/IPOSnapshot";
 import FamilyCompanion from "./components/widgets/FamilyCompanion";
 import ContentSnapshot from "./components/widgets/ContentSnapshot";
 import LinkedInPulse from "./components/widgets/LinkedInPulse";
+import TaskReminders from "./components/widgets/TaskReminders";
 
 export default function Home() {
   return (
@@ -35,9 +36,15 @@ export default function Home() {
           </div>
           
           {/* Row 4: Content Snapshot + LinkedIn Snapshot */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <ContentSnapshot />
             <LinkedInPulse />
+          </div>
+          
+          {/* Row 5: Task Reminders */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <TaskReminders />
+            <div className="hidden lg:block" /> {/* 빈 공간 유지 */}
           </div>
         </div>
       </div>
