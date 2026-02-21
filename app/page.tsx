@@ -5,18 +5,17 @@ import Crypto101 from "./components/widgets/Crypto101";
 import RiskPick from "./components/widgets/RiskPick";
 import IPOSnapshot from "./components/widgets/IPOSnapshot";
 import FamilyCompanion from "./components/widgets/FamilyCompanion";
-import ContentSnapshot from "./components/widgets/ContentSnapshot";
+import LinkedInSnapshot from "./components/widgets/LinkedInSnapshot";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-[var(--bg-primary)]">
       <Header />
       
-      {/* Increased padding: py-6 -> py-8, px-4 -> px-6 */}
+      {/* Increased padding */}
       <div className="px-6 sm:px-8 lg:px-12 py-8">
         <div className="max-w-[1600px] mx-auto">
           {/* Row 1: Mango Vitals + Knowledge Queue */}
-          {/* Increased gap: gap-6 -> gap-8, mb-6 -> mb-8 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <MangoVitals />
             <KnowledgeQueue />
@@ -34,8 +33,12 @@ export default function Home() {
             <FamilyCompanion />
           </div>
           
-          {/* Row 4: Content Snapshot (full width) */}
-          <ContentSnapshot />
+          {/* Row 4: LinkedIn Snapshot */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <LinkedInSnapshot />
+            {/* 향후 추가 위젯 자리 */}
+            <div className="hidden lg:block" />
+          </div>
         </div>
       </div>
     </main>
