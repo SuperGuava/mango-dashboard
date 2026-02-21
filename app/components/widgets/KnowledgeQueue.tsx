@@ -1,42 +1,17 @@
 "use client";
 
 import useSWR from "swr";
-import { AlertTriangle, Github, RefreshCw, Clock } from "lucide-react";
+import { BookOpen, ArrowRight } from "lucide-react";
 import Widget from "../Widget";
-import { formatRelativeTime } from "../../lib/utils";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface KnowledgeQueueData {
-  obsidian: {
-    lastBackup: string;
-    syncStatus: "ok" | "needed";
-  };
   retention: {
     review: number;
     keep: number;
     discard: number;
   };
-  github: {
-    openPRs: number;
-    openIssues: number;
-    items: Array<{
-      type: string;
-      number: number;
-      title: string;
-      createdAt: string;
-      url: string;
-    }>;
-  };
-}
-
-function CountCard({ count, label, color }: { count: number; label: string; color: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center w-20 h-20 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-subtle)]">
-      <span className={`text-2xl font-bold ${color}`}>{count}</span>
-      <span className="text-xs text-[var(--text-secondary)] mt-1">{label}</span>
-    </div>
-  );
 }
 
 export default function KnowledgeQueue() {
@@ -47,82 +22,64 @@ export default function KnowledgeQueue() {
   );
 
   const isLoading = !data;
+  const reviewCount = data?.retention?.review || 0;
+  const totalCount = (data?.retention?.review || 0) + (data?.retention?.keep || 0) + (data?.retention?.discard || 0);
+  
+  // 진행률 계산
+  const progress = totalCount > 0 ? ((totalCount - reviewCount) / totalCount) * 100 : 0;
 
   return (
     <Widget 
       title="Knowledge Queue" 
       icon="📚"
+      mangoPick="리뷰 대기 중인 지식을 정리하세요"
       loading={isLoading}
     >
-      <div className="space-y-4">
-        {/* Count Cards */}
-        <div className="flex justify-center gap-3">
-          <CountCard count={data?.retention.review || 0} label="Review" color="text-[var(--warning)]" />
-          <CountCard count={data?.retention.keep || 0} label="Keep" color="text-[var(--success)]" />
-          <CountCard count={data?.retention.discard || 0} label="Discard" color="text-[var(--text-secondary)]" />
+      <div className="flex flex-col items-center py-2">
+        {/* 리뷰 대기 - 큰 숫자 */}
+        <div className="text-center mb-6">
+          <div className="text-sm text-[var(--text-secondary)] mb-3">리뷰 대기</div>
+          <div className="text-6xl sm:text-7xl font-bold text-[var(--text-primary)]">
+            {reviewCount}
+          </div>
+          <div className="text-sm text-[var(--text-secondary)] mt-2">개의 항목</div>
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-[var(--border-subtle)]"></div>
-
-        {/* Alerts Section */}
-        <div>
-          <h3 className="text-sm font-medium text-[var(--text-primary)] mb-2 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-[var(--warning)]" />
-            Actions Needed
-          </h3>
-          
-          {/* Obsidian Sync */}
-          {data?.obsidian.syncStatus === "needed" && (
-            <div className="flex items-center justify-between p-3 bg-[var(--bg-elevated)] rounded-lg mb-2">
-              <div className="flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-[var(--warning)]" />
-                <div>
-                  <div className="text-sm text-[var(--text-primary)]">Obsidian sync needed</div>
-                  <div className="text-xs text-[var(--text-secondary)]">
-                    Last backup: {formatRelativeTime(new Date(data.obsidian.lastBackup))}
-                  </div>
-                </div>
-              </div>
-              <button className="px-3 py-1 text-xs font-medium bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded hover:bg-[var(--bg-elevated)] transition-colors">
-                Sync Now
-              </button>
-            </div>
-          )}
-
-          {/* GitHub PRs */}
-          {data?.github.openPRs && data.github.openPRs > 0 && (
-            <div className="flex items-center justify-between p-3 bg-[var(--bg-elevated)] rounded-lg">
-              <div className="flex items-center gap-2">
-                <Github className="w-4 h-4 text-[var(--info)]" />
-                <div>
-                  <div className="text-sm text-[var(--text-primary)]">
-                    {data.github.openPRs} open PR{data.github.openPRs > 1 ? 's' : ''}
-                  </div>
-                  {data.github.items.length > 0 && (
-                    <div className="text-xs text-[var(--text-secondary)] truncate max-w-[200px]">
-                      #{data.github.items[0].number} "{data.github.items[0].title}"
-                    </div>
-                  )}
-                </div>
-              </div>
-              <a 
-                href={data.github.items[0]?.url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="px-3 py-1 text-xs font-medium bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded hover:bg-[var(--bg-elevated)] transition-colors"
-              >
-                View
-              </a>
-            </div>
-          )}
+        {/* 진행률 바 */}
+        <div className="w-full max-w-[280px] mb-6">
+          <div className="flex justify-between text-sm text-[var(--text-secondary)] mb-2">
+            <span>진행률</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="h-3 bg-[var(--bg-elevated)] rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-[var(--accent-mango)] to-[var(--warning)] rounded-full transition-all duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="text-xs text-[var(--text-secondary)] mt-2 text-center">
+            {totalCount}개 중 {totalCount - reviewCount}개 완료
+          </div>
         </div>
 
-        {/* Next Backup Info */}
-        <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-          <Clock className="w-3 h-3" />
-          <span>Next scheduled backup: 18:00 KST</span>
-        </div>
+        {/* 지식 관리하기 버튼 */}
+        <a
+          href="https://obsidian.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-5 py-2.5 bg-[var(--bg-elevated)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] rounded-lg transition-colors text-sm font-medium"
+        >
+          <BookOpen className="w-4 h-4" />
+          지식 관리하기
+          <ArrowRight className="w-4 h-4" />
+        </a>
+
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="mt-4 text-sm text-[var(--error)] text-center">
+            데이터를 불러올 수 없습니다
+          </div>
+        )}
       </div>
     </Widget>
   );

@@ -12,23 +12,24 @@ export default function Home() {
     <main className="min-h-screen bg-[var(--bg-primary)]">
       <Header />
       
-      <div className="px-4 sm:px-6 lg:px-8 py-6">
-        {/* Desktop: 2x3 Grid + full-width Content Snapshot */}
+      {/* Increased padding: py-6 -> py-8, px-4 -> px-6 */}
+      <div className="px-6 sm:px-8 lg:px-12 py-8">
         <div className="max-w-[1600px] mx-auto">
           {/* Row 1: Mango Vitals + Knowledge Queue */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Increased gap: gap-6 -> gap-8, mb-6 -> mb-8 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <MangoVitals />
             <KnowledgeQueue />
           </div>
           
           {/* Row 2: Crypto 101 + Risk Pick */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <Crypto101 />
             <RiskPick />
           </div>
           
           {/* Row 3: IPO Snapshot + Family Companion */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <IPOSnapshot />
             <FamilyCompanion />
           </div>

@@ -1,9 +1,8 @@
 "use client";
 
 import useSWR from "swr";
-import { Activity, Clock, Zap, Calendar, AlertCircle, FileText } from "lucide-react";
+import { RefreshCw, Activity } from "lucide-react";
 import Widget from "../Widget";
-import { formatTimeRemaining } from "../../lib/utils";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -13,72 +12,35 @@ interface OpenClawHealthData {
     gateway: {
       status: "online" | "offline" | "unknown";
       lastChecked: string | null;
-      uptime: string | null;
-      errors: string[];
     };
-    cronJobs: Array<{
-      name: string;
-      lastRun: string | null;
-      status: "success" | "error" | "running" | "unknown";
-      logCount: number;
-      recentErrors: number;
-    }>;
-    gptUsage: {
-      estimatedTokens: number;
-      estimatedCost: number;
-      last24hCalls: number;
-      lastReset: string | null;
-    };
-    logFiles: Array<{
-      name: string;
-      size: number;
-      modified: string;
-    }>;
-    logDirectory: string;
   };
-  fallback?: boolean;
   lastUpdated: string;
 }
 
 export default function MangoVitals() {
-  // OpenClaw 로그 파싱 API 사용
-  const { data: openclawData, error: openclawError } = useSWR<OpenClawHealthData>(
+  const { data: openclawData, error: openclawError, mutate } = useSWR<OpenClawHealthData>(
     "/api/health/openclaw?type=summary",
     fetcher,
     { refreshInterval: 30000 }
   );
 
   const isLoading = !openclawData;
-  const isFallback = openclawData?.fallback;
+  const gateway = openclawData?.data?.gateway;
+  const isOnline = gateway?.status === "online";
 
-  const healthData = openclawData?.data;
-  const gateway = healthData?.gateway;
-  const cronJobs = healthData?.cronJobs || [];
-  const gptUsage = healthData?.gptUsage;
+  const handleRefresh = async () => {
+    await mutate();
+  };
 
-  // 최근 24시간 크론 작업 상태 계산
-  const totalJobs = cronJobs.length;
-  const successfulJobs = cronJobs.filter(j => j.status === "success").length;
-  const failedJobs = cronJobs.filter(j => j.status === "error" || j.recentErrors > 0).length;
-
-  const getStatusColor = (status: string | undefined) => {
-    switch (status) {
-      case "online":
-      case "success":
-      case "ok":
-        return "bg-[var(--success)]";
-      case "running":
-      case "limited":
-      case "warning":
-        return "bg-[var(--warning)]";
-      case "offline":
-      case "error":
-      case "exhausted":
-        return "bg-[var(--error)]";
-      case "unknown":
-      default:
-        return "bg-[var(--text-secondary)]";
-    }
+  // 마지막 체크 시간 포맷팅
+  const getLastChecked = () => {
+    if (!gateway?.lastChecked) return "--";
+    const date = new Date(gateway.lastChecked);
+    return date.toLocaleTimeString("ko-KR", { 
+      hour: "2-digit", 
+      minute: "2-digit",
+      hour12: false 
+    });
   };
 
   return (
@@ -86,76 +48,51 @@ export default function MangoVitals() {
       title="Mango Vitals" 
       icon="🥭"
       loading={isLoading}
+      mangoPick="모든 시스템 정상 작동 중!"
     >
-      <div className="space-y-3">
-        {/* Gateway Status */}
-        <div className="flex items-center gap-3 p-3 bg-[var(--bg-elevated)] rounded-lg">
-          <div className="relative">
-            <div className={`w-3 h-3 rounded-full ${getStatusColor(gateway?.status)}`}></div>
-            {gateway?.status === "online" && (
-              <div className={`absolute inset-0 w-3 h-3 rounded-full ${getStatusColor(gateway?.status)} animate-pulse-ring`}></div>
-            )}
+      <div className="flex flex-col items-center justify-center py-4">
+        {/* 대형 상태 아이콘 */}
+        <div className="relative mb-4">
+          <div className={`w-24 h-24 rounded-full flex items-center justify-center ${
+            isOnline 
+              ? "bg-[var(--success)]/20 border-4 border-[var(--success)]" 
+              : "bg-[var(--error)]/20 border-4 border-[var(--error)]"
+          }`}>
+            <Activity className={`w-12 h-12 ${
+              isOnline ? "text-[var(--success)]" : "text-[var(--error)]"
+            }`} />
           </div>
-          <div className="flex-1">
-            <div className="text-sm font-medium text-[var(--text-primary)]">OpenClaw Gateway</div>
-            <div className="text-xs text-[var(--text-secondary)]">
-              {gateway?.status === "online" ? "Online" : gateway?.status === "offline" ? "Offline" : "Unknown"}
-            </div>
-          </div>
-          <Activity className="w-4 h-4 text-[var(--text-secondary)]" />
+          {/* 펄스 애니메이션 */}
+          {isOnline && (
+            <div className="absolute inset-0 w-24 h-24 rounded-full bg-[var(--success)]/30 animate-ping" />
+          )}
         </div>
 
-        {/* GPT Usage */}
-        <div className="flex items-center gap-3 p-3 bg-[var(--bg-elevated)] rounded-lg">
-          <div className={`w-3 h-3 rounded-full ${gptUsage && gptUsage.estimatedTokens > 100000 ? "bg-[var(--warning)]" : "bg-[var(--success)]"}`}></div>
-          <div className="flex-1">
-            <div className="text-sm font-medium text-[var(--text-primary)]">GPT Usage (24h)</div>
-            <div className="text-xs text-[var(--text-secondary)]">
-              {gptUsage ? `${gptUsage.last24hCalls} calls • ~${gptUsage.estimatedTokens.toLocaleString()} tokens` : "--"}
-            </div>
+        {/* 상태 텍스트 */}
+        <div className="text-center mb-6">
+          <div className={`text-3xl font-bold mb-1 ${
+            isOnline ? "text-[var(--success)]" : "text-[var(--error)]"
+          }`}>
+            {isOnline ? "🟢 Online" : "🔴 Offline"}
           </div>
-          <Zap className="w-4 h-4 text-[var(--text-secondary)]" />
+          <div className="text-sm text-[var(--text-secondary)]">
+            마지막 체크: {getLastChecked()}
+          </div>
         </div>
 
-        {/* Cron Jobs */}
-        <div className="flex items-center gap-3 p-3 bg-[var(--bg-elevated)] rounded-lg">
-          <div className={`w-3 h-3 rounded-full ${failedJobs === 0 ? "bg-[var(--success)]" : failedJobs < 3 ? "bg-[var(--warning)]" : "bg-[var(--error)]"}`}></div>
-          <div className="flex-1">
-            <div className="text-sm font-medium text-[var(--text-primary)]">Cron Jobs</div>
-            <div className="text-xs text-[var(--text-secondary)]">
-              {totalJobs > 0 ? `${successfulJobs}/${totalJobs} Success${failedJobs > 0 ? ` • ${failedJobs} Failed` : ""}` : "No jobs found"}
-            </div>
-          </div>
-          <Clock className="w-4 h-4 text-[var(--text-secondary)]" />
-        </div>
+        {/* 새로고침 버튼 */}
+        <button
+          onClick={handleRefresh}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[var(--bg-elevated)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] rounded-lg transition-colors text-sm font-medium"
+        >
+          <RefreshCw className="w-4 h-4" />
+          새로고침
+        </button>
 
-        {/* Recent Log Files */}
-        {healthData?.logFiles && healthData.logFiles.length > 0 && (
-          <div className="flex items-center gap-3 p-3 bg-[var(--bg-elevated)] rounded-lg">
-            <div className="w-3 h-3 rounded-full bg-[var(--info)]"></div>
-            <div className="flex-1">
-              <div className="text-sm font-medium text-[var(--text-primary)]">Log Files</div>
-              <div className="text-xs text-[var(--text-secondary)]">
-                {healthData.logFiles.length} files tracked
-              </div>
-            </div>
-            <FileText className="w-4 h-4 text-[var(--text-secondary)]" />
-          </div>
-        )}
-
-        {/* Fallback Warning */}
-        {isFallback && (
-          <div className="flex items-center gap-2 p-2 bg-[var(--warning)]/10 rounded-lg text-xs text-[var(--warning)]">
-            <AlertCircle className="w-4 h-4" />
-            <span>로그 디렉토리를 찾을 수 없습니다</span>
-          </div>
-        )}
-
-        {/* Error Message */}
+        {/* 에러 메시지 */}
         {openclawError && (
-          <div className="flex items-center gap-2 p-2 bg-[var(--error)]/10 rounded-lg text-xs text-[var(--error)]">
-            <AlertCircle className="w-4 h-4" />
-            <span>로그 데이터를 불러올 수 없습니다</span>
+          <div className="mt-4 text-sm text-[var(--error)]">
+            데이터를 불러올 수 없습니다
           </div>
         )}
       </div>
