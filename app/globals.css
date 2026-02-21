@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 96%;
+    --card: 220 14% 9%;
+    --card-foreground: 0 0% 96%;
+    --popover: 220 14% 9%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 43 100% 50%;
+    --primary-foreground: 0 0% 4%;
+    --secondary: 220 14% 13%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 220 14% 16%;
+    --muted-foreground: 218 11% 65%;
+    --accent: 220 14% 13%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 14% 18%;
+    --input: 220 14% 18%;
+    --ring: 43 100% 50%;
+    --radius: 0.5rem;
+    
+    /* Custom Mango Dashboard Colors */
+    --bg-primary: #0B0C0F;
+    --bg-secondary: #15171C;
+    --bg-elevated: #1E2128;
+    --border-subtle: #2A2E37;
+    --text-primary: #F5F5F5;
+    --text-secondary: #9CA3AF;
+    --accent-mango: #FFB800;
+    --success: #22C55E;
+    --warning: #EAB308;
+    --error: #EF4444;
+    --info: #3B82F6;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-[var(--bg-primary)] text-[var(--text-primary)];
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3A3E47;
+}
+
+/* Pulse animation for online status */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Card hover effect */
+.widget-card {
+  @apply transition-all duration-200 ease-out;
+}
+
+.widget-card:hover {
+  transform: translateY(-2px);
+  border-color: #3A3E47;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
