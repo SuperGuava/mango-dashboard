@@ -5,6 +5,7 @@ import Crypto101 from "./components/widgets/Crypto101";
 import RiskPick from "./components/widgets/RiskPick";
 import IPOSnapshot from "./components/widgets/IPOSnapshot";
 import FamilyCompanion from "./components/widgets/FamilyCompanion";
+import ContentSnapshot from "./components/widgets/ContentSnapshot";
 import LinkedInSnapshot from "./components/widgets/LinkedInSnapshot";
 
 export default function Home() {
@@ -33,11 +34,10 @@ export default function Home() {
             <FamilyCompanion />
           </div>
           
-          {/* Row 4: LinkedIn Snapshot */}
+          {/* Row 4: Content Snapshot + LinkedIn Snapshot */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <ContentSnapshot />
             <LinkedInSnapshot />
-            {/* 향후 추가 위젯 자리 */}
-            <div className="hidden lg:block" />
           </div>
         </div>
       </div>
