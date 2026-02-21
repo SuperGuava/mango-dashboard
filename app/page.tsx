@@ -6,7 +6,7 @@ import RiskPick from "./components/widgets/RiskPick";
 import IPOSnapshot from "./components/widgets/IPOSnapshot";
 import FamilyCompanion from "./components/widgets/FamilyCompanion";
 import ContentSnapshot from "./components/widgets/ContentSnapshot";
-import LinkedInSnapshot from "./components/widgets/LinkedInSnapshot";
+import LinkedInPulse from "./components/widgets/LinkedInPulse";
 
 export default function Home() {
   return (
@@ -37,7 +37,7 @@ export default function Home() {
           {/* Row 4: Content Snapshot + LinkedIn Snapshot */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <ContentSnapshot />
-            <LinkedInSnapshot />
+            <LinkedInPulse />
           </div>
         </div>
       </div>
